@@ -18,6 +18,7 @@ int main(int argc, char* argv[])
     
     int rank, size, provided;
     int iter, NUM_ITER_PER_PROCESS;
+    int i;
     MPI_Init_thread(&argc, &argv, MPI_THREAD_SINGLE, &provided);
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -26,7 +27,6 @@ int main(int argc, char* argv[])
     srand(SEED * rank); // Important: Multiply SEED by "rank" when you introduce MPI!
 
     NUM_ITER_PER_PROCESS = NUM_ITER / size;
-    MPI_Bcast(&NUM_ITER_PER_PROCESS, 1, MPI_INT, 0, MPI_COMM_WORLD);
     
     // Calculate PI following a Monte Carlo method
     for (iter = 0; iter < NUM_ITER_PER_PROCESS; iter++)
@@ -43,10 +43,19 @@ int main(int argc, char* argv[])
         }
     }
     printf("Process %d of %d | count: %d\n", rank, size, mycount);
-    
-    MPI_Reduce(&mycount, &count, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-    
-    if (rank == 0) {
+
+    if (rank != 0) {
+        MPI_Send(&mycount, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+    } else {
+        int* mycount_arr = (int*)malloc(size * sizeof(int));
+        mycount_arr[0] = mycount;
+        for (i=1; i<size; i++) {
+            MPI_Recv(mycount_arr+i, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            printf("Process %d of %d | receive count from process %d: %d\n", rank, size, mycount_arr[i], i);
+        }
+
+        for (i=0; i<size; i++) { count += mycount_arr[i]; }
+
         // Estimate Pi and display the result
         pi = ((double)count / (double)(NUM_ITER_PER_PROCESS*size)) * 4.0;
         printf("Process %d of %d | combined count: %d, estimated pi: %f\n", rank, size, count, pi);
