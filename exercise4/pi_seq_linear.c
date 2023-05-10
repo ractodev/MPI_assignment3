@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
-#include <sys/time.h>
 #include <mpi.h>
 
 #define SEED     921
@@ -23,8 +22,8 @@ int main(int argc, char* argv[])
     int iter, NUM_ITER_PER_PROCESS;
     int i;
 
-    t1 = mysecond();
     MPI_Init_thread(&argc, &argv, MPI_THREAD_SINGLE, &provided);
+    t1 = MPI_Wtime(); 
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -64,21 +63,10 @@ int main(int argc, char* argv[])
         // Estimate Pi and display the result
         pi = ((double)count / (double)(NUM_ITER_PER_PROCESS*size)) * 4.0;
         printf("Process %d of %d | combined count: %d, estimated pi: %f\n", rank, size, count, pi);
-        t2 = mysecond();
+        t2 = MPI_Wtime(); 
         printf("Process %d of %d | Execution time: %11.8f s\n", rank, size, (t2 - t1));
     }
     
     MPI_Finalize();
     return 0;
 }
-
-// function with timer
-double mysecond(){
-  struct timeval tp;
-  struct timezone tzp;
-  int i;
-
-  i = gettimeofday(&tp,&tzp);
-  return ( (double) tp.tv_sec + (double) tp.tv_usec * 1.e-6 );
-}
-
